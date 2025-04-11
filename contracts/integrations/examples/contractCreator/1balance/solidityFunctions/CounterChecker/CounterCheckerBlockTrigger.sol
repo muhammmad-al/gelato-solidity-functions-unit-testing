@@ -2,18 +2,17 @@
 pragma solidity ^0.8.17;
 import "../../../../../AutomateTaskCreator.sol";
 
-// task ID: https://app.gelato.network/functions/task/0x59aef5baff3b1359764eceacd11a31748a24d72d14aa555dab714bdab746834e:11155111
+// task ID: https://app.gelato.network/functions/task/0xe6c0d4703a465a26e3cc8674e296cc59fe5a31e246490020756c8fc4b1f6199c:11155111
 
 /**
  * @dev
- * Contract that creates a resolver task with a time trigger
+ * Contract that creates a resolver task with a block trigger
  */
-contract CounterCheckerTimeTrigger is AutomateTaskCreator {
+contract CounterCheckerBlockTrigger is AutomateTaskCreator {
     uint256 public count;
     uint256 public lastExecuted;
     bytes32 public taskId;
     uint256 public constant MAX_COUNT = 5;
-    uint256 public constant INTERVAL = 3 minutes;
 
     event CounterTaskCreated(bytes32 taskId);
     event CounterTaskCancelled(bytes32 taskId);
@@ -23,7 +22,7 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
     function createTask() external {
         require(taskId == bytes32(""), "Already started task");
 
-        // Setup module data with resolver + time trigger
+        // Setup module data with resolver + block trigger
         ModuleData memory moduleData = ModuleData({
             modules: new Module[](3),
             args: new bytes[](3)
@@ -40,11 +39,8 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
 
         moduleData.args[1] = _proxyModuleArg();
 
-        // Configure time trigger with the interval
-        moduleData.args[2] = _timeTriggerModuleArg(
-            uint128(block.timestamp),  // Start now
-            uint128(INTERVAL)          // Run every INTERVAL seconds
-        );
+        // Configure block trigger
+        moduleData.args[2] = _blockTriggerModuleArg();
 
         // Use selector of function to be called
         bytes memory execSelector = abi.encodeWithSelector(this.increaseCount.selector);
@@ -77,7 +73,7 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
         view
         returns (bool canExec, bytes memory execPayload)
     {
-        canExec = true; // The trigger module handles the interval checking
+        canExec = true; // The trigger module handles the block checking
         execPayload = abi.encodeCall(this.increaseCount, (1));
     }
 
@@ -87,4 +83,4 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
         emit CounterTaskCancelled(taskId);
         taskId = bytes32("");
     }
-}
+} 

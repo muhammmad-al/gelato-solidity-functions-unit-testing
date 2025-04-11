@@ -1,9 +1,15 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-deploy";
+import "@openzeppelin/hardhat-upgrades";
+import * as dotenv from "dotenv";
 
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const accounts: string[] = PRIVATE_KEY ? [PRIVATE_KEY] : [];
+dotenv.config();
+
+const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
+const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
+
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   namedAccounts: {
@@ -19,25 +25,30 @@ const config: HardhatUserConfig = {
       },
     },
     mainnet: {
-      accounts,
+      accounts: [PRIVATE_KEY],
       chainId: 1,
       url: `https://eth-mainnet.g.alchemy.com/v2/<your-api-key>`,
     },
     // Shared Testnet
     blueberry: {
-      accounts,
+      accounts: [PRIVATE_KEY],
       chainId: 88153591557,
       url: `https://rpc.arb-blueberry.gelato.digital`,
     },
     raspberry: {
-      accounts,
+      accounts: [PRIVATE_KEY],
       chainId: 123420111,
       url: `https://rpc.opcelestia-raspberry.gelato.digital`,
     },
     blackberry: {
-      accounts,
+      accounts: [PRIVATE_KEY],
       chainId: 94204209,
       url: `https://rpc.polygon-blackberry.gelato.digital`,
+    },
+    sepolia: {
+      url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
+      accounts: [PRIVATE_KEY],
+      chainId: 11155111,
     },
   },
   solidity: {
@@ -46,6 +57,9 @@ const config: HardhatUserConfig = {
         version: "0.8.20",
       },
     ],
+  },
+  etherscan: {
+    apiKey: ETHERSCAN_API_KEY,
   },
 };
 

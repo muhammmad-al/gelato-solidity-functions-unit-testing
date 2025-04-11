@@ -2,26 +2,26 @@
 pragma solidity ^0.8.17;
 import "../../../../../AutomateTaskCreator.sol";
 
-// task ID: https://app.gelato.network/functions/task/0x59aef5baff3b1359764eceacd11a31748a24d72d14aa555dab714bdab746834e:11155111
-
 /**
  * @dev
- * Contract that creates a resolver task with a time trigger
+ * Contract that creates a resolver task that executes only once
  */
-contract CounterCheckerTimeTrigger is AutomateTaskCreator {
+contract CounterCheckerSingleExec is AutomateTaskCreator {
     uint256 public count;
     uint256 public lastExecuted;
     bytes32 public taskId;
-    uint256 public constant MAX_COUNT = 5;
-    uint256 public constant INTERVAL = 3 minutes;
-
+    bool public hasExecuted;
+    
+    // Task events
     event CounterTaskCreated(bytes32 taskId);
     event CounterTaskCancelled(bytes32 taskId);
+    event SingleExecutionCompleted(uint256 timestamp);
 
     constructor(address _automate) AutomateTaskCreator(_automate) {}
 
     function createTask() external {
         require(taskId == bytes32(""), "Already started task");
+        require(!hasExecuted, "Task has already executed once");
 
         // Setup module data with resolver + time trigger
         ModuleData memory moduleData = ModuleData({
@@ -40,14 +40,14 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
 
         moduleData.args[1] = _proxyModuleArg();
 
-        // Configure time trigger with the interval
+        // Configure time trigger to execute immediately
         moduleData.args[2] = _timeTriggerModuleArg(
-            uint128(block.timestamp),  // Start now
-            uint128(INTERVAL)          // Run every INTERVAL seconds
+            0,  // Execute immediately
+            0   // No interval (will only execute once)
         );
 
-        // Use selector of function to be called
-        bytes memory execSelector = abi.encodeWithSelector(this.increaseCount.selector);
+        // Use selector of function to be called with argument
+        bytes memory execSelector = abi.encodeCall(this.increaseCount, (1));
 
         // Register task with Gelato using 1balance
         bytes32 id = _createTask(
@@ -62,14 +62,14 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
     }
 
     function increaseCount(uint256 _amount) external onlyDedicatedMsgSender {
-        uint256 newCount = count + _amount;
-        if (newCount >= MAX_COUNT) {
-            cancelTask();
-            count = 0;
-        } else {
-            count += _amount;
-            lastExecuted = block.timestamp;
-        }
+        // Increment the counter
+        count += _amount;
+        lastExecuted = block.timestamp;
+        
+        // Mark as executed and cancel the task
+        hasExecuted = true;
+        emit SingleExecutionCompleted(block.timestamp);
+        cancelTask();
     }
 
     function checker()
@@ -77,7 +77,8 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
         view
         returns (bool canExec, bytes memory execPayload)
     {
-        canExec = true; // The trigger module handles the interval checking
+        // Only execute if it hasn't executed yet
+        canExec = !hasExecuted;
         execPayload = abi.encodeCall(this.increaseCount, (1));
     }
 
@@ -87,4 +88,4 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
         emit CounterTaskCancelled(taskId);
         taskId = bytes32("");
     }
-}
+} 

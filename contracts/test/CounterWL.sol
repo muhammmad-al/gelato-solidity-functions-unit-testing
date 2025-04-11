@@ -9,6 +9,8 @@ contract CounterWL is Ownable {
     uint256 public lastExecuted;
     mapping(address => bool) public whitelisted;
 
+    constructor() Ownable(msg.sender) {}
+
     modifier onlyWhitelisted() {
         require(
             whitelisted[msg.sender] || msg.sender == owner(),

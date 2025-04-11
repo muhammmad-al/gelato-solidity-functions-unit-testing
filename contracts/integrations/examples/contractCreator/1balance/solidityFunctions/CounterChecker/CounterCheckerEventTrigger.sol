@@ -2,19 +2,22 @@
 pragma solidity ^0.8.17;
 import "../../../../../AutomateTaskCreator.sol";
 
-// task ID: https://app.gelato.network/functions/task/0x59aef5baff3b1359764eceacd11a31748a24d72d14aa555dab714bdab746834e:11155111
+// task ID: https://app.gelato.network/functions/task/0x20419b24c22199c4aa23d67b759f841a0cafd113847e59c2ee10b97a54a0d627:11155111
 
 /**
  * @dev
- * Contract that creates a resolver task with a time trigger
+ * Contract that creates a resolver task with an event trigger
  */
-contract CounterCheckerTimeTrigger is AutomateTaskCreator {
+contract CounterCheckerEventTrigger is AutomateTaskCreator {
     uint256 public count;
     uint256 public lastExecuted;
     bytes32 public taskId;
     uint256 public constant MAX_COUNT = 5;
-    uint256 public constant INTERVAL = 3 minutes;
-
+    
+    // Event that will trigger the task
+    event TriggerEvent(address indexed sender, uint256 timestamp);
+    
+    // Task events
     event CounterTaskCreated(bytes32 taskId);
     event CounterTaskCancelled(bytes32 taskId);
 
@@ -23,7 +26,7 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
     function createTask() external {
         require(taskId == bytes32(""), "Already started task");
 
-        // Setup module data with resolver + time trigger
+        // Setup module data with resolver + event trigger
         ModuleData memory moduleData = ModuleData({
             modules: new Module[](3),
             args: new bytes[](3)
@@ -40,14 +43,19 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
 
         moduleData.args[1] = _proxyModuleArg();
 
-        // Configure time trigger with the interval
-        moduleData.args[2] = _timeTriggerModuleArg(
-            uint128(block.timestamp),  // Start now
-            uint128(INTERVAL)          // Run every INTERVAL seconds
+        // Configure event trigger to listen for TriggerEvent
+        bytes32[][] memory topics = new bytes32[][](1);
+        topics[0] = new bytes32[](1);
+        topics[0][0] = keccak256("TriggerEvent(address,uint256)");
+        
+        moduleData.args[2] = _eventTriggerModuleArg(
+            address(this),  // Contract to listen to
+            topics,         // Event topics to filter
+            0              // No block confirmations needed
         );
 
-        // Use selector of function to be called
-        bytes memory execSelector = abi.encodeWithSelector(this.increaseCount.selector);
+        // Use selector of function to be called with argument
+        bytes memory execSelector = abi.encodeCall(this.increaseCount, (1));
 
         // Register task with Gelato using 1balance
         bytes32 id = _createTask(
@@ -77,7 +85,7 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
         view
         returns (bool canExec, bytes memory execPayload)
     {
-        canExec = true; // The trigger module handles the interval checking
+        canExec = true; // The trigger module handles the event checking
         execPayload = abi.encodeCall(this.increaseCount, (1));
     }
 
@@ -87,4 +95,9 @@ contract CounterCheckerTimeTrigger is AutomateTaskCreator {
         emit CounterTaskCancelled(taskId);
         taskId = bytes32("");
     }
-}
+    
+    // Function to emit the trigger event
+    function emitTriggerEvent() external {
+        emit TriggerEvent(msg.sender, block.timestamp);
+    }
+} 
