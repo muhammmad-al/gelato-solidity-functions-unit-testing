@@ -2,7 +2,6 @@
 pragma solidity ^0.8.17;
 import "../../../../../AutomateTaskCreator.sol";
 
-// CID: QmQa6b9fwHRDgJQcjrXpKgsfERZmJAm4GSaiP5Z1U2dPeT
 // task ID: https://app.gelato.network/functions/task/0x02408b152e917cd023cba2ff38f8d290f84a7876e85bc5dd9ef8a77a7d4b7534:11155111
 
 /**

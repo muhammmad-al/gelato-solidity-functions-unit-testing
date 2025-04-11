@@ -2,8 +2,6 @@
 pragma solidity ^0.8.17;
 import "../../../../../AutomateTaskCreator.sol";
 
-// CID: QmQa6b9fwHRDgJQcjrXpKgsfERZmJAm4GSaiP5Z1U2dPeT
-
 /**
  * @dev
  * Contract that creates a Web3 Function task with a block trigger
